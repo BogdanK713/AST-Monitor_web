@@ -2,7 +2,7 @@
 name = "ast-monitor-web"
 version = "0.1.0"
 description = ""
-authors = [""]
+authors = ["Vanja Pajovic <vanja.pajovic@student.um.si>", "Bogdan <bogdan.kascelan@student.um.si>"]
 readme = "README.md"
 packages = [{include = "ast_monitor_web"}]
 
