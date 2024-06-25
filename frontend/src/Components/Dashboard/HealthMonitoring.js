@@ -5,7 +5,8 @@ import '../../Styles/Dashboard.css';
 const HealthMonitoring = ({ token }) => {
   const [rules, setRules] = useState(null);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loadingPatterns, setLoadingPatterns] = useState(false);
+  const [loadingSession, setLoadingSession] = useState(false);
   const [warnings, setWarnings] = useState([]);
   const [sessionData] = useState({
     hr_max: 220,
@@ -23,7 +24,7 @@ const HealthMonitoring = ({ token }) => {
   });
 
   const handleRunNiaARM = async () => {
-    setLoading(true);
+    setLoadingPatterns(true);
     setError('');
     try {
       const response = await axios.post('http://localhost:5000/cyclist/run_niaarm', {}, {
@@ -35,11 +36,11 @@ const HealthMonitoring = ({ token }) => {
       console.error('Error running NiaARM:', error.response ? error.response.data : error.message);
       setError('Failed to run NiaARM: ' + (error.response ? error.response.data.error : error.message));
     }
-    setLoading(false);
+    setLoadingPatterns(false);
   };
 
   const handleCheckSession = async () => {
-    setLoading(true);
+    setLoadingSession(true);
     setError('');
     try {
       const response = await axios.post('http://localhost:5000/cyclist/check_session', sessionData, {
@@ -50,7 +51,7 @@ const HealthMonitoring = ({ token }) => {
       console.error('Error checking session:', error.response ? error.response.data : error.message);
       setError('Failed to check session: ' + (error.response ? error.response.data.error : error.message));
     }
-    setLoading(false);
+    setLoadingSession(false);
   };
 
   useEffect(() => {
@@ -72,34 +73,34 @@ const HealthMonitoring = ({ token }) => {
   const formatWarningMessage = (warning, pattern) => {
     const lhsConditions = pattern.lhs.map(condition => {
       const [name, range] = condition.match(/(.+?)\((.+)\)/).slice(1, 3);
-      return `${name} is between <strong>${range}</strong>`;
+      return `<strong>${name}</strong> is between <strong>${range}</strong>`;
     }).join(' and ');
 
     const rhsConditions = pattern.rhs.map(condition => {
       const [name, range] = condition.match(/(.+?)\((.+)\)/).slice(1, 3);
-      return `${name} is between <strong>${range}</strong>`;
+      return `<strong>${name}</strong> is between <strong>${range}</strong>`;
     }).join(' and ');
 
     let heartRateWarning = '';
-    let warningTitle = 'Heart Rate Warning';
+    let warningTitle = 'Heart Rate Warnings';
 
     if (warning.includes('hr_max')) {
       const hrMaxValue = parseFloat(warning.match(/hr_max\(\[([\d.]+), ([\d.]+)\]\)/)[2]);
       if (hrMaxValue > 200) {
         heartRateWarning = ' <strong>Your maximum heart rate is too high.</strong>';
-        warningTitle = 'High Heart Rate Warning';
+        warningTitle = 'High Heart Rate Warnings';
       }
     }
     if (warning.includes('hr_min')) {
       const hrMinValue = parseFloat(warning.match(/hr_min\(\[([\d.]+), ([\d.]+)\]\)/)[1]);
       if (hrMinValue < 50) {
         heartRateWarning = ' <strong>Your minimum heart rate is too low.</strong>';
-        warningTitle = 'Low Heart Rate Warning';
+        warningTitle = 'Low Heart Rate Warnings';
       }
     }
 
     return { 
-      message: `<strong>Careful!</strong> When your ${lhsConditions}, <strong>then</strong> ${rhsConditions}. This could indicate potential health risks based on your recent session data. ${heartRateWarning} Please monitor your health metrics closely.`,
+      message: `<strong>CAREFUL!</strong><br /> When your ${lhsConditions}, <br /><strong>THEN</strong> <br />${rhsConditions}. <br />This could indicate potential health risks based on your recent session data. ${heartRateWarning} Please monitor your health metrics closely.`,
       title: warningTitle
     };
   };
@@ -120,7 +121,7 @@ const HealthMonitoring = ({ token }) => {
 
   const renderRule = (rule, index) => (
     <div key={index} className="rule-card">
-      <h4>Based on Injury Pattern</h4>
+      <p><strong>BASED ON INJURY PATTERN</strong></p>
       <p><strong>WHEN:</strong> {rule.lhs.join(' and ')}</p>
       <p><strong>THEN:</strong> {rule.rhs.join(' and ')}</p>
       <p><strong>Confidence: </strong>{rule.confidence.toFixed(2)} - Indicates how often the rule is correct.</p>
@@ -153,7 +154,7 @@ const HealthMonitoring = ({ token }) => {
 
   // Filter out only the High Heart Rate and Low Heart Rate warnings
   const filteredWarnings = Object.keys(groupedWarnings)
-    .filter(title => title === 'High Heart Rate Warning' || title === 'Low Heart Rate Warning')
+    .filter(title => title === 'High Heart Rate Warnings' || title === 'Low Heart Rate Warnings')
     .reduce((acc, title) => {
       acc[title] = groupedWarnings[title];
       return acc;
@@ -165,15 +166,15 @@ const HealthMonitoring = ({ token }) => {
       <div className="button-group">
         <div className="button-section">
           <p>Run the program to find health patterns from your previous training sessions using machine learning.</p>
-          <button onClick={handleRunNiaARM} disabled={loading}>
-            {loading ? 'Running NiaARM...' : 'Find Patterns'}
+          <button onClick={handleRunNiaARM} disabled={loadingPatterns || loadingSession}>
+            {loadingPatterns ? 'Running NiaARM...' : 'Find Patterns'}
           </button>
         </div>
         <hr className="button-divider" />
         <div className="button-section">
           <p>Check the last session for any health risks identified through data analysis.</p>
-          <button onClick={handleCheckSession} disabled={loading}>
-            {loading ? 'Checking Session...' : 'Check Session'}
+          <button onClick={handleCheckSession} disabled={loadingPatterns || loadingSession}>
+            {loadingSession ? 'Checking Session...' : 'Check Session'}
           </button>
         </div>
       </div>
@@ -183,7 +184,7 @@ const HealthMonitoring = ({ token }) => {
           <div className="warning-groups">
             {Object.keys(filteredWarnings).map((title, index) => (
               <div key={index} className="warning-group">
-                <h3>{title}</h3>
+                <h3 className="warning-title">{title}</h3>
                 {filteredWarnings[title].map((item, subIndex) => renderWarning(item.warning, subIndex))}
               </div>
             ))}
